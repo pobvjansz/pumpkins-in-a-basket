@@ -1,6 +1,6 @@
 """ Micro-service which holds Pumpkin data """
 from logging import debug, info
-import requests
+import requests, time
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
@@ -51,7 +51,7 @@ def update_pumpkins():
                 PUMPKINS.append(request.get_json())
                 request_object = { 'weight': get_pumpkin_weight(pumpkin_type), 'pumpkinRemoved': False }
                 requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
-                app.logger.info(request.get_json())
+                time.sleep(20)
                 response = jsonify(request.get_json()), 200
         else:
             response = 'Not enough capacity available', 400
