@@ -1,4 +1,5 @@
 """ Micro-service which holds Pumpkin data """
+from logging import debug, info
 import requests
 from flask import Flask, jsonify, request
 
@@ -22,6 +23,13 @@ def pumpkins():
     else:
         return get_pumpkins()
 
+@app.route("/pumpkins/<int:pumpkin_id>", methods=['GET'])
+def get_pumpkin(pumpkin_id):
+    pumpkin = [pumpkin for pumpkin in PUMPKINS if pumpkin['id'] == pumpkin_id]
+    if len(pumpkin) == 0:
+        return 'Not Found', 404
+    return jsonify(pumpkin[0])
+
 def get_pumpkins():
     """Return all Pumpkins"""
     return jsonify(PUMPKINS)
@@ -35,7 +43,7 @@ def update_pumpkins():
         if check_sufficient_capacity(pumpkin_type):
             remove_pumpkin = bool(request.get_json()['removePumpkin'])
             if remove_pumpkin:
-                PUMPKINS = [i for i in PUMPKINS if i['name'] == request.get_json()["name"]]
+                PUMPKINS = [i for i in PUMPKINS if i['id'] == request.get_json()["id"]]
                 request_object = { 'weight': get_pumpkin_weight(pumpkin_type), 'pumpkinRemoved': True }
                 requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
                 response = 'Pumpkin have been removed succesfully', 200
@@ -43,7 +51,8 @@ def update_pumpkins():
                 PUMPKINS.append(request.get_json())
                 request_object = { 'weight': get_pumpkin_weight(pumpkin_type), 'pumpkinRemoved': False }
                 requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
-                response = 'Pumpkin have been added succesfully', 200
+                app.logger.info(request.get_json())
+                response = jsonify(request.get_json()), 200
         else:
             response = 'Not enough capacity available', 400
     return response
