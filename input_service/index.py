@@ -1,4 +1,4 @@
-""" Micro-service which holds testpumpkin data """
+""" Micro-service which holds Pumpkin data """
 import requests
 from flask import Flask, jsonify, request
 
@@ -12,38 +12,38 @@ PUMPKINTYPES =  [
 
 CAPACITY_SERVICE_URL = "http://capacity:5500/"
 
-TESTPUMPKINS = []
+PUMPKINS = []
 
-@app.route("/testpumpkins", methods=['GET', 'POST'])
-def testpumpkins():
-    """Testpumpkins endpoint for getting and posting Pumpkins to basket"""
+@app.route("/pumpkins", methods=['GET', 'POST'])
+def pumpkins():
+    """pumpkins endpoint for getting and posting Pumpkins to basket"""
     if request.method == 'POST':
-        return update_testpumpkins()
+        return update_pumpkins()
     else:
-        return get_testpumpkins()
+        return get_pumpkins()
 
-def get_testpumpkins():
-    """Return all testpumpkins"""
-    return jsonify(TESTPUMPKINS)
+def get_pumpkins():
+    """Return all Pumpkins"""
+    return jsonify(PUMPKINS)
 
-def update_testpumpkins():
+def update_pumpkins():
     """Update/Add or Remove Pumpkins in basket"""
     response = 'No valid request', 400
-    global TESTPUMPKINS
+    global PUMPKINS
     pumpkin_type = request.get_json()["type"]
     if validate_pumpkin_type(pumpkin_type):
         if check_sufficient_capacity(pumpkin_type):
             remove_pumpkin = bool(request.get_json()['removePumpkin'])
             if remove_pumpkin:
-                TESTPUMPKINS = [i for i in TESTPUMPKINS if i['name'] == request.get_json()["name"]]
+                PUMPKINS = [i for i in PUMPKINS if i['name'] == request.get_json()["name"]]
                 request_object = { 'weight': get_pumpkin_weight(pumpkin_type), 'pumpkinRemoved': True }
                 requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
-                response = 'Testpumpkin have been removed succesfully', 200
+                response = 'Pumpkin have been removed succesfully', 200
             else:
-                TESTPUMPKINS.append(request.get_json())
+                PUMPKINS.append(request.get_json())
                 request_object = { 'weight': get_pumpkin_weight(pumpkin_type), 'pumpkinRemoved': False }
                 requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
-                response = 'Testpumpkin have been added succesfully', 200
+                response = 'Pumpkin have been added succesfully', 200
         else:
             response = 'Not enough capacity available', 400
     return response
