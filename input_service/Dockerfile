@@ -1,0 +1,12 @@
+FROM centos:8
+ENV FLASK_APP=index.py
+ENV FLASK_DEBUG=1
+ENV FLASK_RUN_HOST=0.0.0.0
+
+RUN  yum update -y && \
+  yum install -y \
+    git-2.27.0-1.el8.x86_64 python36-3.6.8-2.module_el8.4.0+790+083e3d81.x86_64 python3-pip-9.0.3-19.el8.noarch python3-flask.noarch python3-requests
+
+EXPOSE 5000
+COPY . .
+CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
