@@ -1,0 +1,10 @@
+version: "3.9"
+services:
+  input:
+    build: ./input_service
+    ports:
+      - "5000:5000"
+  capacity:
+    build: ./capacity_service
+    ports:
+      - "5500:5500"
