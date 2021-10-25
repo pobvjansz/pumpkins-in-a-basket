@@ -1,8 +1,7 @@
-"""
-Micro-service which holds testpumpkin data """
+""" Micro-service which holds testpumpkin data """
+import requests
 from flask import Flask, jsonify, request
-from flask.wrappers import Response
-import sys, requests
+
 app = Flask(__name__)
 
 PUMPKINTYPES =  [
@@ -13,51 +12,56 @@ PUMPKINTYPES =  [
 
 CAPACITY_SERVICE_URL = "http://capacity:5500/"
 
-testPumpkins = []
+TESTPUMPKINS = []
 
 @app.route("/testpumpkins", methods=['GET', 'POST'])
 def testpumpkins():
-  if(request.method == 'POST'):
-      return update_testpumpkins()
-  else:
-    return get_testpumpkins()
+    """Testpumpkins endpoint for getting and posting Pumpkins to basket"""
+    if request.method == 'POST':
+        return update_testpumpkins()
+    else:
+        return get_testpumpkins()
 
 def get_testpumpkins():
-  return jsonify(testPumpkins)
+    """Return all testpumpkins"""
+    return jsonify(TESTPUMPKINS)
 
 def update_testpumpkins():
-  response = 'No valid request', 400
-  global testPumpkins
-  pumpkinType = request.get_json()["type"]
-  if(validatePumpkinType(pumpkinType)):
-      if(sufficientCapacity(pumpkinType)):
-        removePumpkin = bool(request.get_json()['removePumpkin'])
-        if(removePumpkin):
-          testPumpkins = [i for i in testPumpkins if (i['name'] == request.get_json()["name"])]
-          requestObj = { 'weight': getPumpkinWeight(pumpkinType), 'pumpkinRemoved': True }
-          requests.post(CAPACITY_SERVICE_URL + 'capacity', json=requestObj)
-          response = 'Testpumpkin have been removed succesfully', 200
+    """Update/Add or Remove Pumpkins in basket"""
+    response = 'No valid request', 400
+    global TESTPUMPKINS
+    pumpkin_type = request.get_json()["type"]
+    if validate_pumpkin_type(pumpkin_type):
+        if check_sufficient_capacity(pumpkin_type):
+            remove_pumpkin = bool(request.get_json()['removePumpkin'])
+            if remove_pumpkin:
+                TESTPUMPKINS = [i for i in TESTPUMPKINS if i['name'] == request.get_json()["name"]]
+                request_object = { 'weight': get_pumpkin_weight(pumpkin_type), 'pumpkinRemoved': True }
+                requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
+                response = 'Testpumpkin have been removed succesfully', 200
+            else:
+                TESTPUMPKINS.append(request.get_json())
+                request_object = { 'weight': get_pumpkin_weight(pumpkin_type), 'pumpkinRemoved': False }
+                requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
+                response = 'Testpumpkin have been added succesfully', 200
         else:
-          testPumpkins.append(request.get_json())
-          requestObj = { 'weight': getPumpkinWeight(pumpkinType), 'pumpkinRemoved': False }
-          requests.post(CAPACITY_SERVICE_URL + 'capacity', json=requestObj)
-          response = 'Testpumpkin have been added succesfully', 200
-      else :
-        response = 'Not enough capacity available', 400
-  return response
+            response = 'Not enough capacity available', 400
+    return response
 
-def validatePumpkinType(pumpkinType):
-  return (pumpkinType in PUMPKINTYPES)
-  
-def getPumpkinWeight(pumpkinType):
-  if(validatePumpkinType):
-    pumpkinWeightRequest = CAPACITY_SERVICE_URL + 'pumpkinweight?type='+ pumpkinType    
-    pumpkinWeight = str(requests.get(pumpkinWeightRequest).text)
-    return pumpkinWeight
-  else:
+def validate_pumpkin_type(pumpkin_type):
+    """Validate Pumpkintype before adding to basket"""
+    return pumpkin_type in PUMPKINTYPES
+
+def get_pumpkin_weight(pumpkin_type):
+    """Get the weight of a given pumpkin"""
+    if validate_pumpkin_type(pumpkin_type):
+        pumpkin_weight_request = CAPACITY_SERVICE_URL + 'pumpkinweight?type='+ pumpkin_type
+        pumpkin_weight = str(requests.get(pumpkin_weight_request).text)
+        return pumpkin_weight
     return 'No valid pumpkinType', 400
 
-def sufficientCapacity(pumpkinType):
-  availableCapacity = str(requests.get(CAPACITY_SERVICE_URL + 'capacity').text)
-  pumpkinWeight = getPumpkinWeight(pumpkinType)
-  return (int(availableCapacity) >= int(pumpkinWeight))
+def check_sufficient_capacity(pumpkin_type):
+    """Get the remaining capacity of the basket"""
+    available_capacity = str(requests.get(CAPACITY_SERVICE_URL + 'capacity').text)
+    pumpkin_weight = get_pumpkin_weight(pumpkin_type)
+    return (int(available_capacity) >= int(pumpkin_weight))

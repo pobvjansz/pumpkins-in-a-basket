@@ -1,7 +1,7 @@
 """
 Micro-service which displays available capacity """
-from flask import Flask, jsonify, request 
-import sys, requests
+import sys
+from flask import Flask, request
 app = Flask(__name__)
 
 pumpkins = [
@@ -11,36 +11,33 @@ pumpkins = [
 ]
 
 MAXCAPACITY = 11
-capacity = MAXCAPACITY
+AVAILABLECAPACITY = MAXCAPACITY
 
 @app.route("/capacity")
 def get_capacity():
-  """List the available capacity"""
-  # print("GetCapacity", file=sys.stderr)
-  return str(capacity)
+    """Return the available capacity of the basket"""
+    return str(AVAILABLECAPACITY)
 
 @app.route("/capacity", methods=["POST"])
 def update_capacity():
-  """Update the available capacity"""
-  global capacity
-  request_json = request.get_json(force=True) 
-  pumpkinWeight = int(request_json['weight'])
-  pumpkinRemoved = bool(request_json['pumpkinRemoved'])
-  if((capacity - pumpkinWeight) >= 0):
-    if(pumpkinRemoved):
-      capacity = capacity - pumpkinWeight
+    """Update the capacity of the basket"""
+    global AVAILABLECAPACITY
+    request_json = request.get_json(force=True)
+    pumpkin_weight = int(request_json['weight'])
+    pumpkin_removed = bool(request_json['pumpkinRemoved'])
+    if pumpkin_removed:
+        if(AVAILABLECAPACITY + pumpkin_weight) <= MAXCAPACITY:
+            AVAILABLECAPACITY = AVAILABLECAPACITY + pumpkin_weight
+            return "Capacity updated. New capacity: " + str(AVAILABLECAPACITY), 200
+        return "Capacity can't be higher than: " + str(MAXCAPACITY), 400
     else:
-      if(capacity + pumpkinWeight <= MAXCAPACITY):
-        capacity = capacity + pumpkinWeight
-      else:
-        return "Capacity can't be higher than " + str(MAXCAPACITY), 400
-    return "Capacity updated", 200
-  else:
-    return "Capacity can't be lower than 0", 400
+        if(AVAILABLECAPACITY - pumpkin_weight) >= 0:
+            AVAILABLECAPACITY = AVAILABLECAPACITY - pumpkin_weight
+            return "Capacity updated. New capacity: " + str(AVAILABLECAPACITY), 200
+        return "Capacity can't be lower than: " + str(MAXCAPACITY), 400
 
 @app.route("/pumpkinweight")
-def get_pumpkinweight():
-  """Get the weight of a pumpkintype"""
-  pumpkinType = request.args.get("type")
-  pumpkinWeight = next((item for item in pumpkins if item['name'] == pumpkinType), False)
-  return str(pumpkinWeight["weight"])
+def get_pumpkin_weight():
+    pumpkin_type = request.args.get("type")
+    pumpkin_weight = next((item for item in pumpkins if item['name'] == pumpkin_type), False)
+    return str(pumpkin_weight["weight"])
