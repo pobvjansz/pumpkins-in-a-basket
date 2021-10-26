@@ -7,7 +7,11 @@ RUN yum-config-manager \
     --add-repo \
     https://download.docker.com/linux/centos/docker-ce.repo
 
-RUN yum install -y docker-ce docker-ce-cli containerd.io
+RUN yum install -y docker-ce docker-ce-cli containerd.io unzip
 
 RUN curl -L "https://github.com/docker/compose/releases/download/1.27.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 RUN chmod +x /usr/local/bin/docker-compose
+
+RUN curl -L "https://releases.hashicorp.com/terraform/1.0.9/terraform_1.0.9_linux_amd64.zip" -o /usr/local/bin/terraform.zip
+RUN cd /usr/local/bin && unzip terraform.zip
+RUN chmod +x /usr/local/bin/terraform
