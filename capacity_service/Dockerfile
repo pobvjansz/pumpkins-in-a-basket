@@ -8,4 +8,4 @@ RUN  yum update -y && \
 
 EXPOSE 5500
 COPY . .
-CMD ["flask", "run", "--host=0.0.0.0", "--port=5500"]
+CMD ["flask", "run", "--host=0.0.0.0", "--port=5500", "--with-threads"]
