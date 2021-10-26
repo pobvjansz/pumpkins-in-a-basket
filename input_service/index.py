@@ -22,27 +22,14 @@ def pumpkins():
         response = 'No capacity available', 400
         global BASKET
         if check_sufficient_capacity(request.get_json()['type']):
-            remove_pumpkin = bool(request.get_json()['removePumpkin'])
-            if remove_pumpkin:
-                if len(BASKET) == 0:
-                    return response
-                for i in range(len(BASKET)):
-                    if str(BASKET[i]["id"]) == str(request.get_json()["id"]):
-                        del BASKET[i]
-                        request_object = { 'weight': get_pumpkin_weight(request.get_json()['type']), 'pumpkinRemoved': True }
-                        requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
-                        response = 'Pumpkin have been removed succesfully', 200
-                    else:
-                        response = 'Pumpkin was not in the basket', 400
+            if validate_pumpkin(request.get_json()):
+                pumpkin = {"id": request.get_json()['id'], "type": request.get_json()['type']}
+                BASKET.append(pumpkin)
+                request_object = { 'weight': get_pumpkin_weight(request.get_json()['type']), 'pumpkinRemoved': False }
+                requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
+                response = 'Pumpkin have been added succesfully', 200
             else:
-                if validate_pumpkin(request.get_json()):
-                    pumpkin = {"id": request.get_json()['id'], "type": request.get_json()['type']}
-                    BASKET.append(pumpkin)
-                    request_object = { 'weight': get_pumpkin_weight(request.get_json()['type']), 'pumpkinRemoved': False }
-                    requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
-                    response = 'Pumpkin have been added succesfully', 200
-                else:
-                    response = 'Unvalid pumpkin to add', 400
+                response = 'Unvalid pumpkin to add', 400
         return response
     else:
         return jsonify(BASKET)
@@ -54,6 +41,22 @@ def get_pumpkin(pumpkin_id):
     if len(pumpkin) == 0:
         return 'Not Found', 404
     return jsonify(pumpkin[0])
+
+@app.route("/pumpkins/<int:pumpkin_id>", methods=['DELETE'])
+def delete_pumpkin(pumpkin_id):
+    response = 'Deletion of pumpkin failed', 400
+    if len(BASKET) == 0:
+        return response
+    for i in range(len(BASKET)):
+        if str(BASKET[i]["id"]) == str(pumpkin_id):
+            request_object = { 'weight': get_pumpkin_weight(BASKET[i]["type"]), 'pumpkinRemoved': True }
+            requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
+            del BASKET[i]
+            response = 'Pumpkin have been removed succesfully', 200
+        else:
+            response = 'Pumpkin was not in the basket', 400
+    return response
+
 
 def validate_pumpkin(pumpkin):
     """Validate a pumpkin before adding it to the basket"""
