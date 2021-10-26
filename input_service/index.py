@@ -1,5 +1,6 @@
 """ Micro-service which holds Pumpkin data """
-import requests
+from logging import debug, info
+import requests, time, sys
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
@@ -26,7 +27,7 @@ def pumpkins():
                 if len(BASKET) == 0:
                     return response
                 for i in range(len(BASKET)):
-                    if str(BASKET[i]["name"]) == str(request.get_json()['name']):
+                    if str(BASKET[i]["id"]) == str(request.get_json()["id"]):
                         del BASKET[i]
                         request_object = { 'weight': get_pumpkin_weight(request.get_json()['type']), 'pumpkinRemoved': True }
                         requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
@@ -35,7 +36,7 @@ def pumpkins():
                         response = 'Pumpkin was not in the basket', 400
             else:
                 if validate_pumpkin(request.get_json()):
-                    pumpkin = {"name": request.get_json()['name'], "type": request.get_json()['type']}
+                    pumpkin = {"id": request.get_json()['id'], "type": request.get_json()['type']}
                     BASKET.append(pumpkin)
                     request_object = { 'weight': get_pumpkin_weight(request.get_json()['type']), 'pumpkinRemoved': False }
                     requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
@@ -46,15 +47,23 @@ def pumpkins():
     else:
         return jsonify(BASKET)
 
+@app.route("/pumpkins/<int:pumpkin_id>", methods=['GET'])
+def get_pumpkin(pumpkin_id):
+    """Get Specific Pumpkin by ID"""
+    pumpkin = [pumpkin for pumpkin in BASKET if pumpkin['id'] == pumpkin_id]
+    if len(pumpkin) == 0:
+        return 'Not Found', 404
+    return jsonify(pumpkin[0])
+
 def validate_pumpkin(pumpkin):
     """Validate a pumpkin before adding it to the basket"""
     pumpkin_type = str(pumpkin['type'])
-    pumpkin_name= str(pumpkin['name'])
-    return (validate_pumpkin_name(pumpkin_name) and validate_pumpkin_type(pumpkin_type))
+    pumpkin_id = str(pumpkin['id'])
+    return (validate_pumpkin_id(pumpkin_id) and validate_pumpkin_type(pumpkin_type))
 
-def validate_pumpkin_name(pumpkin_name):
-    """Validate a pumpkin's name is unique before adding it to the basket"""
-    if not any(pumpkin['name'] == pumpkin_name for pumpkin in BASKET):
+def validate_pumpkin_id(pumpkin_id):
+    """Validate a pumpkin's ID is unique before adding it to the basket"""
+    if not any(pumpkin['id'] == pumpkin_id for pumpkin in BASKET):
         return True
     return False
 
