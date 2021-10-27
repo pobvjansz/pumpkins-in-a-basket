@@ -22,9 +22,9 @@ def pumpkins():
         global BASKET
         if check_sufficient_capacity(request.get_json()['type']):
             if validate_pumpkin(request.get_json()):
-                response = add_pumpkin(request.get_json())
+                response = jsonify(request.get_json()), 200
             else:
-                response = 'Unvalid pumpkin to add', 400
+                response = jsonify(request.get_json()), 400
         return response
     else:
         return jsonify(BASKET)
@@ -40,23 +40,20 @@ def get_pumpkin(pumpkin_id):
 @app.route("/pumpkins/<int:pumpkin_id>", methods=['DELETE'])
 def delete_pumpkin(pumpkin_id):
     """DELETE endpoint that deletes pumpking from a basket"""
-    response = 'Deletion of pumpkin failed', 400
     index = get_pumpkin_index_by_id(pumpkin_id)
     if index is False:
-        response = "Pumpkin not found in basket", 404
+        return "Pumpkin not found in basket", 404
     pumpkin = get_pumpkin_in_basket_by_id(pumpkin_id)
     request_object = { 'weight': get_pumpkin_weight(pumpkin["type"]), 'pumpkinRemoved': True }
     requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
     del BASKET[index]
-    response = 'Pumpkin have been removed succesfully', 200
-    return response
+    return jsonify(request.get_json(), 200)
 
 @app.route("/pumpkins/<int:pumpkin_id>", methods=['PUT'])
 def put_pumpkin(pumpkin_id):
     """PUT endpoint for updating the a pumpkin in a basket by id"""
-    response = 'Update of pumpkin failed', 400
     if len(BASKET) == 0:
-        return response
+        return 'Update of pumpkin failed', 400
     pumpkin = get_pumpkin_in_basket_by_id(pumpkin_id)
     request_object = { 'weight': get_pumpkin_weight(pumpkin['type']), 'pumpkinRemoved': True }
     requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
@@ -64,8 +61,7 @@ def put_pumpkin(pumpkin_id):
     pumpkin['type'] = request.get_json()['type']
     request_object = { 'weight': get_pumpkin_weight(pumpkin['type']), 'pumpkinRemoved': False }
     requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
-    response = update_pumpkin_in_basket_by_id(pumpkin, pumpkin_id)
-    return response
+    return jsonify(request.get_json(), 200)
 
 def add_pumpkin(pumpkin):
     """Adds pumpkin to a basket"""
