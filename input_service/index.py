@@ -1,6 +1,5 @@
 """ Micro-service which holds Pumpkin data """
-from logging import debug, info
-import requests, time, sys
+import requests
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
@@ -23,11 +22,7 @@ def pumpkins():
         global BASKET
         if check_sufficient_capacity(request.get_json()['type']):
             if validate_pumpkin(request.get_json()):
-                pumpkin = {"id": request.get_json()['id'], "type": request.get_json()['type']}
-                BASKET.append(pumpkin)
-                request_object = { 'weight': get_pumpkin_weight(request.get_json()['type']), 'pumpkinRemoved': False }
-                requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
-                response = 'Pumpkin have been added succesfully', 200
+                response = add_pumpkin(request.get_json())
             else:
                 response = 'Unvalid pumpkin to add', 400
         return response
@@ -44,19 +39,64 @@ def get_pumpkin(pumpkin_id):
 
 @app.route("/pumpkins/<int:pumpkin_id>", methods=['DELETE'])
 def delete_pumpkin(pumpkin_id):
+    """DELETE endpoint that deletes pumpking from a basket"""
     response = 'Deletion of pumpkin failed', 400
-    if len(BASKET) == 0:
-        return response
-    for i in range(len(BASKET)):
-        if str(BASKET[i]["id"]) == str(pumpkin_id):
-            request_object = { 'weight': get_pumpkin_weight(BASKET[i]["type"]), 'pumpkinRemoved': True }
-            requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
-            del BASKET[i]
-            response = 'Pumpkin have been removed succesfully', 200
-        else:
-            response = 'Pumpkin was not in the basket', 400
+    index = get_pumpkin_index_by_id(pumpkin_id)
+    if index is False:
+        response = "Pumpkin not found in basket", 404
+    pumpkin = get_pumpkin_in_basket_by_id(pumpkin_id)
+    request_object = { 'weight': get_pumpkin_weight(pumpkin["type"]), 'pumpkinRemoved': True }
+    requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
+    del BASKET[index]
+    response = 'Pumpkin have been removed succesfully', 200
     return response
 
+@app.route("/pumpkins/<int:pumpkin_id>", methods=['PUT'])
+def put_pumpkin(pumpkin_id):
+    """PUT endpoint for updating the a pumpkin in a basket by id"""
+    response = 'Update of pumpkin failed', 400
+    if len(BASKET) == 0:
+        return response
+    pumpkin = get_pumpkin_in_basket_by_id(pumpkin_id)
+    request_object = { 'weight': get_pumpkin_weight(pumpkin['type']), 'pumpkinRemoved': True }
+    requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
+    pumpkin['id'] = pumpkin_id
+    pumpkin['type'] = request.get_json()['type']
+    request_object = { 'weight': get_pumpkin_weight(pumpkin['type']), 'pumpkinRemoved': False }
+    requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
+    response = update_pumpkin_in_basket_by_id(pumpkin, pumpkin_id)
+    return response
+
+def add_pumpkin(pumpkin):
+    """Adds pumpkin to a basket"""
+    pumpkin = {"id": pumpkin['id'], "type": pumpkin['type']}
+    request_object = { 'weight': get_pumpkin_weight(pumpkin['type']), 'pumpkinRemoved': False }
+    requests.post(CAPACITY_SERVICE_URL + 'capacity', json=request_object)
+    BASKET.append(pumpkin)
+    return 'Pumpkin have been added succesfully', 200
+
+def get_pumpkin_in_basket_by_id(pumpkin_id):
+    """Get the a pumpkin in a basket by id"""
+    index = get_pumpkin_index_by_id(pumpkin_id)
+    if index is False:
+        return "Pumpkin not found in basket", 404
+    pumpkin = BASKET[index]
+    return pumpkin
+
+def update_pumpkin_in_basket_by_id(pumpkin, pumpkin_id):
+    """Update the a pumpkin in a basket by id"""
+    index = get_pumpkin_index_by_id(pumpkin_id)
+    if index is False:
+        return "Pumpkin not found in basket", 404
+    BASKET[index] = pumpkin
+    return "Pumpkin changed", 200
+
+def get_pumpkin_index_by_id(pumpkin_id):
+    """Get the index of a pumpkin in the basket"""
+    for i in range(len(BASKET)):
+        if str(BASKET[i]["id"]) == str(pumpkin_id):
+            return i
+    return False
 
 def validate_pumpkin(pumpkin):
     """Validate a pumpkin before adding it to the basket"""
