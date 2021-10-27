@@ -22,6 +22,7 @@ def pumpkins():
         global BASKET
         if check_sufficient_capacity(request.get_json()['type']):
             if validate_pumpkin(request.get_json()):
+                add_pumpkin(request.get_json())
                 response = jsonify(request.get_json()), 200
             else:
                 response = jsonify(request.get_json()), 400
